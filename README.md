@@ -120,9 +120,13 @@ This starts the Akka-powered JVM CLI chat session.
 ```
 LLM_PROVIDER=external-secure-endpoint
 LLM_MODEL=gpt-5.1
+OPENAI_API_KEY=sk-...
+OPENAI_MODEL=gpt-4o-mini
+OPENAI_BASE_URL=https://api.openai.com/v1
+OPENAI_ORG=
 OBSERVABILITY_BROKER=localhost:9092
 SQLITE_MEMORY_MODE=1
-``` 
+```
 
 ---
 ## 11. Seed/Test Data
