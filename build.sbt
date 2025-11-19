@@ -28,7 +28,11 @@ libraryDependencies ++= Seq(
   "org.xerial"       % "sqlite-jdbc"         % "3.45.2.0",
 
   // --- Logging (SLF4J + Logback) ---
-  "ch.qos.logback"    % "logback-classic"     % "1.4.12"
+  "ch.qos.logback"    % "logback-classic"     % "1.4.12",
+
+  // --- Test dependencies ---
+  "com.typesafe.akka" %% "akka-actor-testkit-typed" % akkaVersion % Test,
+  "org.scalatest"     %% "scalatest"                % "3.2.18"    % Test
 )
 
 // Needed for fewer Akka warnings
