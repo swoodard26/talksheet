@@ -21,17 +21,37 @@ object WorkbookCatalog {
     sheets: Seq[SheetMetadata]
   )
 
-  private val entries = new ConcurrentHashMap[UUID, Entry]()
+  sealed trait UploadStatus
+  case object Pending                                    extends UploadStatus
+  final case class Failed(reason: String)               extends UploadStatus
 
-  def register(entry: Entry): Unit =
+  private val entries  = new ConcurrentHashMap[UUID, Entry]()
+  private val statuses = new ConcurrentHashMap[UUID, UploadStatus]()
+
+  def register(entry: Entry): Unit = {
     entries.put(entry.uploadId, entry)
+    statuses.remove(entry.uploadId)
+  }
 
   def lookup(uploadId: UUID): Option[Entry] =
     Option(entries.get(uploadId))
 
-  def unregister(uploadId: UUID): Unit =
+  def unregister(uploadId: UUID): Unit = {
     entries.remove(uploadId)
+    statuses.remove(uploadId)
+  }
 
-  def clear(): Unit =
+  def clear(): Unit = {
     entries.clear()
+    statuses.clear()
+  }
+
+  def markProcessing(uploadId: UUID): Unit =
+    statuses.put(uploadId, Pending)
+
+  def markFailed(uploadId: UUID, reason: String): Unit =
+    statuses.put(uploadId, Failed(reason))
+
+  def status(uploadId: UUID): Option[UploadStatus] =
+    Option(statuses.get(uploadId))
 }

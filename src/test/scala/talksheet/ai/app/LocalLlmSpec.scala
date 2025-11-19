@@ -106,6 +106,31 @@ class LocalLlmSpec
 
       result shouldBe Left("boom")
     }
+
+    "return a not-found error for unknown upload ids" in {
+      val planner  = testKit.spawn(Behaviors.ignore[QueryPlanner.Command])
+      val executor = testKit.spawn(Behaviors.ignore[SqlExecutor.Command])
+      val llm      = new LocalLlm(planner, executor)
+
+      val uploadId = UUID.randomUUID()
+      val result   = llm.sendMessage(uploadId, "question").futureValue
+
+      result shouldBe Left(s"No workbook found for $uploadId")
+    }
+
+    "surface workbook processing failures" in {
+      val planner  = testKit.spawn(Behaviors.ignore[QueryPlanner.Command])
+      val executor = testKit.spawn(Behaviors.ignore[SqlExecutor.Command])
+      val llm      = new LocalLlm(planner, executor)
+
+      val uploadId = UUID.randomUUID()
+      WorkbookCatalog.markProcessing(uploadId)
+      WorkbookCatalog.markFailed(uploadId, "parser exploded")
+
+      val result = llm.sendMessage(uploadId, "question").futureValue
+
+      result shouldBe Left("parser exploded")
+    }
   }
 
   private def registerWorkbook(uploadId: UUID): Unit = {
