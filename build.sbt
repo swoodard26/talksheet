@@ -24,6 +24,9 @@ libraryDependencies ++= Seq(
   // --- Apache POI for .xlsx parsing ---
   "org.apache.poi"    % "poi-ooxml"           % "5.2.5",
 
+  // --- SQLite in-memory execution ---
+  "org.xerial"       % "sqlite-jdbc"         % "3.45.2.0",
+
   // --- Logging (SLF4J + Logback) ---
   "ch.qos.logback"    % "logback-classic"     % "1.4.12"
 )

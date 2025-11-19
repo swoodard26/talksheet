@@ -6,6 +6,7 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.Route
 import akka.stream.SystemMaterializer
 import akka.util.Timeout
+import talksheet.ai.query.{QueryPlanner, SqlExecutor}
 import talksheet.ai.upload.{UploadCoordinator, XlsxParser}
 
 import java.nio.file.Paths
@@ -39,11 +40,16 @@ object Main extends App {
       "upload-coordinator"
     )
 
-  // 3) HTTP routes
-  val uploadRoutes = new UploadRoutes(uploadCoordinator)
-  val allRoutes: Route = new Routes(uploadRoutes).routes
+  // 3) Query planner + SQL executor actors
+  val queryPlanner = system.systemActorOf(QueryPlanner(), "query-planner")
+  val sqlExecutor  = system.systemActorOf(SqlExecutor(), "sql-executor")
 
-  // 4) Bind HTTP server
+  // 4) HTTP routes
+  val uploadRoutes = new UploadRoutes(uploadCoordinator)
+  val chatRoutes   = new ChatRoutes(queryPlanner, sqlExecutor)
+  val allRoutes: Route = new Routes(uploadRoutes, chatRoutes).routes
+
+  // 5) Bind HTTP server
   val bindingFut =
     Http()
       .newServerAt("0.0.0.0", 8080)

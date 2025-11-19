@@ -27,9 +27,8 @@ object UploadCoordinator {
     Behaviors.setup { ctx =>
       import XlsxParser._
 
-      // We don't use parse results yet; just log + ignore.
       val parseResultSink: ActorRef[ParseResult] =
-        ctx.spawn(Behaviors.ignore[ParseResult], "xlsx-parse-result-sink")
+        ctx.spawn(WorkbookLoader(), "workbook-loader")
 
       Behaviors.receiveMessage {
         case UploadXlsx(uploadId, originalFileName, tempFile) =>
