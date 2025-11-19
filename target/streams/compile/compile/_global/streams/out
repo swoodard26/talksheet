@@ -1,0 +1,7 @@
+[0m[[0m[33mwarn[0m] [0m[0m/mnt/c/Users/swood/talksheet/src/main/scala/talksheet/ai/app/Main.scala:28:16: Implicit definition should have explicit type (inferred akka.stream.Materializer) [quickfixable][0m
+[0m[[0m[33mwarn[0m] [0m[0m  implicit val mat = SystemMaterializer(system).materializer[0m
+[0m[[0m[33mwarn[0m] [0m[0m               ^[0m
+[0m[[0m[33mwarn[0m] [0m[0m/mnt/c/Users/swood/talksheet/src/main/scala/talksheet/ai/app/UploadRoutes.scala:42:28: method wasSuccessful in class IOResult is deprecated (since 2.6.0): status is always set to Success(Done)[0m
+[0m[[0m[33mwarn[0m] [0m[0m              if (ioResult.wasSuccessful) {[0m
+[0m[[0m[33mwarn[0m] [0m[0m                           ^[0m
+[0m[[0m[33mwarn[0m] [0m[0mtwo warnings found[0m

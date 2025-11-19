@@ -1,0 +1,1 @@
+[[{"${BASE}/src/main/resources/application.conf":["${BASE}/target/scala-2.13/classes/application.conf"]},{"${BASE}/target/scala-2.13/classes/application.conf":["${BASE}/src/main/resources/application.conf"]}],{"${BASE}/src/main/resources/application.conf":{"file":"file:///mnt/c/Users/swood/talksheet/src/main/resources/application.conf","lastModified":1763533036936}}]

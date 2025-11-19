@@ -1,4 +1,4 @@
-package your.org.upload
+package talksheet.ai.upload
 
 import akka.actor.typed.{ActorRef, Behavior}
 import akka.actor.typed.scaladsl.Behaviors
@@ -22,7 +22,7 @@ object XlsxParser {
 
   sealed trait ParseResult
   final case class ParseSuccess(uploadId: UUID, schema: XlsxSchemaSummary) extends ParseResult
-  final case class ParseFailure(uploadId: UUID, reason: String)         extends ParseResult
+  final case class ParseFailure(uploadId: UUID, reason: String)            extends ParseResult
 
   final case class XlsxSchemaSummary(sheets: Seq[SheetInfo])
   final case class SheetInfo(
@@ -37,7 +37,7 @@ object XlsxParser {
     Behaviors.setup { ctx =>
       Behaviors.receiveMessage {
         case ParseFile(uploadId, filePath, replyTo) =>
-          var fis: FileInputStream    = null
+          var fis: FileInputStream   = null
           var workbook: XSSFWorkbook = null
 
           try {
@@ -84,4 +84,3 @@ object XlsxParser {
       }
     }
 }
-
