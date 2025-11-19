@@ -1,68 +1,86 @@
 package talksheet.ai.query
 
-import akka.actor.testkit.typed.scaladsl.ScalaTestWithActorTestKit
-import org.scalatest.wordspec.AnyWordSpecLike
+import akka.actor.testkit.typed.scaladsl.ActorTestKit
+import org.scalatest.BeforeAndAfterAll
+import org.scalatest.BeforeAndAfterEach
 import org.scalatest.matchers.should.Matchers
-import talksheet.ai.upload.XlsxParser.XlsxSchemaSummary
-import talksheet.ai.query.WorkbookCatalog.{Entry, SheetMetadata}
+import org.scalatest.wordspec.AnyWordSpec
+import talksheet.ai.query.QueryPlanner.{PlanFailed, PlanQuery, PlanSucceeded}
+import talksheet.ai.upload.XlsxParser.{SheetInfo, XlsxSchemaSummary}
 
 import java.sql.Connection
 import java.sql.DriverManager
 import java.util.UUID
 import scala.collection.mutable.ListBuffer
 
-class QueryPlannerSpec
-    extends ScalaTestWithActorTestKit
-    with AnyWordSpecLike
-    with Matchers {
+class QueryPlannerSpec extends AnyWordSpec with Matchers with BeforeAndAfterEach with BeforeAndAfterAll {
 
+  private val testKit = ActorTestKit()
   private val openConnections = ListBuffer.empty[Connection]
 
-  override def afterAll(): Unit = {
+  override def afterEach(): Unit = {
     openConnections.foreach(_.close())
-    super.afterAll()
+    openConnections.clear()
+    WorkbookCatalog.clear()
   }
+
+  override def afterAll(): Unit =
+    testKit.shutdownTestKit()
 
   "QueryPlanner" should {
-    "plan column-specific queries with limits when the sheet is mentioned" in {
+    "plan SQL for the sheet referenced in the question" in {
       val uploadId = UUID.randomUUID()
-      registerWorkbook(uploadId, Seq(
-        SheetMetadata("Sales Data", "tbl_sales", Seq("employee", "region", "amount")),
-        SheetMetadata("Inventory", "tbl_inventory", Seq("item", "quantity"))
-      ))
+      val sheets = Seq(
+        WorkbookCatalog.SheetMetadata("Regional Revenue 2023", "regional_revenue", Seq("Region", "Revenue", "Profit")),
+        WorkbookCatalog.SheetMetadata("Inventory", "inventory", Seq("SKU", "Qty"))
+      )
+      register(uploadId, sheets)
 
-      val probe   = createTestProbe[QueryPlanner.Response]()
-      val planner = spawn(QueryPlanner())
+      val planner = testKit.spawn(QueryPlanner())
+      val probe   = testKit.createTestProbe[QueryPlanner.Response]()
 
-      val question = "Show top 5 sales data region and amount"
-      planner ! QueryPlanner.PlanQuery(uploadId, question, probe.ref)
+      planner ! PlanQuery(uploadId, "Show top 5 Region and Profit from the regional revenue sheet", probe.ref)
 
-      val response = probe.expectMessageType[QueryPlanner.PlanSucceeded]
-      response.sql shouldEqual "SELECT \"region\", \"amount\" FROM \"tbl_sales\" LIMIT 5"
-      response.columns.map(_.name) shouldEqual Seq("region", "amount")
+      val response = probe.expectMessageType[PlanSucceeded]
+      response.sql shouldBe "SELECT \"Region\", \"Profit\" FROM \"regional_revenue\" LIMIT 5"
+      response.columns.map(_.name) shouldBe Seq("Region", "Profit")
     }
 
-    "default to all columns and limit 20 when no hints are provided" in {
+    "default to the first sheet when no name matches" in {
       val uploadId = UUID.randomUUID()
-      registerWorkbook(uploadId, Seq(
-        SheetMetadata("Employees", "tbl_employees", Seq("id", "name", "department"))
-      ))
+      val sheets = Seq(
+        WorkbookCatalog.SheetMetadata("Finance", "finance", Seq("Account", "Balance")),
+        WorkbookCatalog.SheetMetadata("Marketing", "marketing", Seq("Channel", "Spend"))
+      )
+      register(uploadId, sheets)
 
-      val probe   = createTestProbe[QueryPlanner.Response]()
-      val planner = spawn(QueryPlanner())
+      val planner = testKit.spawn(QueryPlanner())
+      val probe   = testKit.createTestProbe[QueryPlanner.Response]()
 
-      planner ! QueryPlanner.PlanQuery(uploadId, "List the employees", probe.ref)
+      planner ! PlanQuery(uploadId, "list 3 things", probe.ref)
 
-      val response = probe.expectMessageType[QueryPlanner.PlanSucceeded]
-      response.sql shouldEqual "SELECT \"id\", \"name\", \"department\" FROM \"tbl_employees\" LIMIT 20"
-      response.columns.map(_.name) shouldEqual Seq("id", "name", "department")
+      val response = probe.expectMessageType[PlanSucceeded]
+      response.sql shouldBe "SELECT \"Account\", \"Balance\" FROM \"finance\" LIMIT 3"
+      response.columns.map(_.name) shouldBe Seq("Account", "Balance")
+    }
+
+    "fail when no workbook entry exists" in {
+      val uploadId = UUID.randomUUID()
+      val planner  = testKit.spawn(QueryPlanner())
+      val probe    = testKit.createTestProbe[QueryPlanner.Response]()
+
+      planner ! PlanQuery(uploadId, "any question", probe.ref)
+
+      val response = probe.expectMessageType[PlanFailed]
+      response.reason should include(uploadId.toString)
     }
   }
 
-  private def registerWorkbook(uploadId: UUID, sheets: Seq[SheetMetadata]): Unit = {
+  private def register(uploadId: UUID, sheets: Seq[WorkbookCatalog.SheetMetadata]): Unit = {
     val connection = DriverManager.getConnection("jdbc:sqlite::memory:")
     openConnections += connection
-    val schema = XlsxSchemaSummary(Seq.empty)
-    WorkbookCatalog.register(Entry(uploadId, connection, schema, sheets))
+    val sheetInfo = sheets.map(s => SheetInfo(s.originalName, s.columns, rowCount = 10))
+    val schema    = XlsxSchemaSummary(sheetInfo)
+    WorkbookCatalog.register(WorkbookCatalog.Entry(uploadId, connection, schema, sheets))
   }
 }

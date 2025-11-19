@@ -28,4 +28,10 @@ object WorkbookCatalog {
 
   def lookup(uploadId: UUID): Option[Entry] =
     Option(entries.get(uploadId))
+
+  def unregister(uploadId: UUID): Unit =
+    entries.remove(uploadId)
+
+  def clear(): Unit =
+    entries.clear()
 }
