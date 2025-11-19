@@ -21,7 +21,11 @@ object XlsxParser {
   ) extends Command
 
   sealed trait ParseResult
-  final case class ParseSuccess(uploadId: UUID, schema: XlsxSchemaSummary) extends ParseResult
+  final case class ParseSuccess(
+    uploadId: UUID,
+    schema: XlsxSchemaSummary,
+    filePath: Path
+  ) extends ParseResult
   final case class ParseFailure(uploadId: UUID, reason: String)            extends ParseResult
 
   final case class XlsxSchemaSummary(sheets: Seq[SheetInfo])
@@ -70,7 +74,7 @@ object XlsxParser {
               sheetInfos.size: java.lang.Integer
             )
 
-            replyTo ! ParseSuccess(uploadId, summary)
+            replyTo ! ParseSuccess(uploadId, summary, filePath)
           } catch {
             case ex: Throwable =>
               ctx.log.error("Failed to parse XLSX {}: {}", uploadId, ex.getMessage)

@@ -130,15 +130,21 @@ Located in `fixtures/`. Includes example spreadsheets for deterministic regressi
 
 ---
 ## 12. Usage Guide
-Once running:
-- Type natural-language questions
-- Press Enter
-- TalkSheet responds using SQL + LLM explanation
+Once the server is running you can test the end-to-end pipeline:
 
-Example:
-```
-> What are the top 5 customers by revenue?
-```
+1. **Upload a workbook**
+   ```bash
+   curl -F "file=@data/sample.xlsx" http://localhost:8080/api/upload-xlsx
+   ```
+   The response contains the `uploadId` registered in the SQLite catalog.
+
+2. **Ask a question about that upload**
+   ```bash
+   curl -X POST http://localhost:8080/api/chat \
+        -H "Content-Type: application/json" \
+        -d '{"uploadId":"<UUID_FROM_UPLOAD>","question":"Show me the first rows"}'
+   ```
+   The system calls the query planner + SQL executor agents and returns the tabular rows that will later feed the explanation agent.
 
 ---
 ## 13. Tests & Evaluations
@@ -150,8 +156,10 @@ TalkSheet includes:
 
 Run tests:
 ```bash
-make test
+sbt test
 ```
+
+To manually validate the conversational query path without the LLM, run the curl commands listed in the usage guide: they trigger the Upload → Planner → SQL Execution → HTTP response pipeline and log each step to the console.
 
 ---
 ## 14. Failure Path Behavior
