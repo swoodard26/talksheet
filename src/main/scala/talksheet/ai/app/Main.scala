@@ -46,7 +46,8 @@ object Main extends App {
 
   // 4) HTTP routes
   val uploadRoutes = new UploadRoutes(uploadCoordinator)
-  val chatRoutes   = new ChatRoutes(queryPlanner, sqlExecutor)
+  val localLlm     = new LocalLlm(queryPlanner, sqlExecutor)
+  val chatRoutes   = new ChatRoutes(localLlm)
   val allRoutes: Route = new Routes(uploadRoutes, chatRoutes).routes
 
   // 5) Bind HTTP server
