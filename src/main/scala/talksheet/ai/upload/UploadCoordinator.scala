@@ -2,6 +2,7 @@ package talksheet.ai.upload
 
 import akka.actor.typed.{ActorRef, Behavior}
 import akka.actor.typed.scaladsl.Behaviors
+import talksheet.ai.query.WorkbookCatalog
 
 import java.nio.file.{Files, Path, StandardCopyOption}
 import java.util.UUID
@@ -38,6 +39,7 @@ object UploadCoordinator {
               uploadId,
               originalFileName
             )
+            WorkbookCatalog.markFailed(uploadId, "Unsupported file type. Please upload .xlsx files.")
           } else {
             try {
               Files.createDirectories(storageDir)
@@ -55,15 +57,19 @@ object UploadCoordinator {
               parser ! ParseFile(uploadId, targetPath, replyTo = parseResultSink)
             } catch {
               case ex: Throwable =>
+                val message = failureMessage(ex)
                 ctx.log.error(
                   "Upload {} failed while moving file: {}",
                   uploadId,
-                  ex.getMessage
+                  message
                 )
+                WorkbookCatalog.markFailed(uploadId, s"Failed to store uploaded file: $message")
             }
           }
 
           Behaviors.same
       }
     }
+  private def failureMessage(ex: Throwable): String =
+    Option(ex.getMessage).filter(_.nonEmpty).getOrElse(ex.getClass.getSimpleName)
 }

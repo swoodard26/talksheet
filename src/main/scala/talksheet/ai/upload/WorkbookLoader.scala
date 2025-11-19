@@ -24,10 +24,11 @@ object WorkbookLoader {
           val dataSource = new SQLiteDataSource()
           dataSource.setUrl("jdbc:sqlite::memory:")
 
-          val connection = dataSource.getConnection
-          connection.setReadOnly(false)
+          var connection: Connection = null
 
           try {
+            connection = dataSource.getConnection
+            connection.setReadOnly(false)
             val sheets = loadWorkbookIntoSqlite(uploadId, filePath.toString, connection)
             connection.setReadOnly(true)
             WorkbookCatalog.register(Entry(uploadId, connection, schema, sheets))
@@ -38,14 +39,17 @@ object WorkbookLoader {
             )
           } catch {
             case ex: Throwable =>
-              ctx.log.error("Failed to load workbook {} into SQLite: {}", uploadId, ex.getMessage)
-              connection.close()
+              val message = errorMessage(ex)
+              ctx.log.error("Failed to load workbook {} into SQLite: {}", uploadId, message)
+              if (connection != null) connection.close()
+              WorkbookCatalog.markFailed(uploadId, s"Failed to load workbook: $message")
           }
 
           Behaviors.same
 
         case ParseFailure(uploadId, reason) =>
           ctx.log.warn("Skipping SQLite load for upload {} due to parser failure: {}", uploadId, reason)
+          WorkbookCatalog.markFailed(uploadId, reason)
           Behaviors.same
       }
     }
@@ -138,4 +142,7 @@ object WorkbookLoader {
       if (count == 0) col else s"${col}_$count"
     }
   }
+
+  private def errorMessage(ex: Throwable): String =
+    Option(ex.getMessage).filter(_.nonEmpty).getOrElse(ex.getClass.getSimpleName)
 }

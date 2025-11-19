@@ -7,6 +7,7 @@ import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.server.directives.FileInfo
 import akka.stream.{IOResult, Materializer, SystemMaterializer}
 import akka.stream.scaladsl.FileIO
+import talksheet.ai.query.WorkbookCatalog
 import talksheet.ai.upload.UploadCoordinator
 
 import java.nio.file.{Files, Path}
@@ -40,6 +41,7 @@ class UploadRoutes(
 
             onSuccess(writeFut) { ioResult =>
               if (ioResult.wasSuccessful) {
+                WorkbookCatalog.markProcessing(uploadId)
                 // Fire-and-forget: tell the actor to process the file
                 uploadCoordinator ! UploadCoordinator.UploadXlsx(
                   uploadId = uploadId,
