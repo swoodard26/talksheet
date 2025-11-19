@@ -46,7 +46,23 @@ object Main extends App {
 
   // 4) HTTP routes
   val uploadRoutes = new UploadRoutes(uploadCoordinator)
-  val localLlm     = new LocalLlm(queryPlanner, sqlExecutor)
+
+  val openAiPlanner = for {
+    apiKey <- sys.env.get("OPENAI_API_KEY")
+  } yield {
+    val model = sys.env.getOrElse("OPENAI_MODEL", "gpt-4o-mini")
+    val base  = sys.env.getOrElse("OPENAI_BASE_URL", "https://api.openai.com/v1")
+    val org   = sys.env.get("OPENAI_ORG")
+    val client = new OpenAiClient(
+      apiKey = apiKey,
+      model = model,
+      baseUrl = base,
+      organization = org
+    )
+    new OpenAiQueryPlanner(client)
+  }
+
+  val localLlm = new LocalLlm(queryPlanner, sqlExecutor, openAiPlanner)
   val chatRoutes   = new ChatRoutes(localLlm)
   val allRoutes: Route = new Routes(uploadRoutes, chatRoutes).routes
 
