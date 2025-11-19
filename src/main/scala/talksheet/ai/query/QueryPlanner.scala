@@ -40,7 +40,8 @@ object QueryPlanner {
                   if (sheet.columns.isEmpty) {
                     replyTo ! PlanFailed(uploadId, s"Sheet '${sheet.originalName}' has no columns to query")
                   } else {
-                    val selectedColumns = selectColumns(sheet, normalizedQuestion)
+                    val questionForColumns = sanitizeForColumnSelection(normalizedQuestion, sheet)
+                    val selectedColumns   = selectColumns(sheet, questionForColumns)
                     val limit           = extractLimit(question)
                     val sql             = buildSql(sheet.tableName, selectedColumns, limit)
                     val columns         = selectedColumns.map(col => ColumnMeta(col, "TEXT"))
@@ -93,6 +94,20 @@ object QueryPlanner {
       normalizedColumn.nonEmpty && normalizedQuestion.contains(normalizedColumn)
     }
     if (matches.nonEmpty) matches else sheet.columns
+  }
+
+  private def sanitizeForColumnSelection(
+    normalizedQuestion: String,
+    sheet: WorkbookCatalog.SheetMetadata
+  ): String = {
+    val normalizedSheetName = normalize(sheet.originalName)
+    val sheetNameVariants = Seq(
+      normalizedSheetName,
+      normalizedSheetName.replaceAll("[0-9]", "")
+    ).filter(_.nonEmpty)
+    sheetNameVariants.foldLeft(normalizedQuestion) { (acc, variant) =>
+      acc.replace(variant, "")
+    }
   }
 
   private def buildSql(tableName: String, columns: Seq[String], limit: Int): String = {
