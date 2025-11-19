@@ -84,7 +84,7 @@ class OpenAiClient(
       method = HttpMethods.POST,
       uri = s"$endpoint/chat/completions",
       entity = HttpEntity(ContentTypes.`application/json`, payload.compactPrint)
-    ).withHeaders(buildHeaders: _*)
+    ).withHeaders(buildHeaders)
 
     http
       .singleRequest(request)
